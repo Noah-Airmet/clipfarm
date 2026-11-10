@@ -1,0 +1,6 @@
+.env
+config.json
+work/
+approved/
+__pycache__/
+.DS_Store

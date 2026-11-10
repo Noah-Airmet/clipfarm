@@ -1,0 +1,31 @@
+{
+  "channel": {
+    "name": "Your Show",
+    "handle": "@yourshow"
+  },
+  "about": "Your Show is a weekly interview podcast about cooking and food science. The audience is home cooks who like to know why a recipe works.",
+  "what_makes_a_good_clip": "a myth getting busted, a guest's strong opinion, or a technique explained in under a minute",
+
+  "videos": [
+    "https://www.youtube.com/watch?v=VIDEO_ID",
+    {"url": "https://youtu.be/ANOTHER_ID", "note": "the bit where they argue about salt"},
+    "~/Movies/episode-12.mp4"
+  ],
+
+  "candidates_per_video": 6,
+  "clips_per_video": 2,
+  "min_score": 7,
+  "min_seconds": 20,
+  "max_seconds": 75,
+
+  "gate": "",
+  "glossary": ["Kenji", "mise en place", "Maillard"],
+
+  "style": {
+    "accent": "#D3B26A",
+    "text": "#F6F3EC",
+    "headline_font": "GeistSerif.ttf",
+    "caption_font": "Geist-Black.ttf",
+    "tag_font": "GeistMono-Medium.ttf"
+  }
+}

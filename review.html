@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clip Review</title>
+<style>
+  :root { --bg: #f6f4ef; --card: #fff; --ink: #1d1b18; --muted: #6f6a61; --line: #e3dfd6;
+          --accent: #9a7a2e; --ok: #2f7d4f; --no: #a34a3a; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161513; --card: #201f1c; --ink: #f1eee8; --muted: #a39d92; --line: #34322d;
+            --accent: #d3b26a; --ok: #62b585; --no: #e0806d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+  header { max-width: 980px; margin: 0 auto; padding: 28px 16px 8px; display: flex; flex-wrap: wrap;
+           align-items: baseline; gap: 12px 24px; }
+  h1 { font-size: 22px; margin: 0; }
+  nav { display: flex; gap: 6px; }
+  nav button { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 99px;
+               padding: 5px 14px; cursor: pointer; font: inherit; }
+  nav button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  main { max-width: 980px; margin: 0 auto; padding: 8px 16px 60px; }
+  .clip { display: grid; grid-template-columns: 230px 1fr; gap: 22px; background: var(--card);
+          border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 14px 0; }
+  video { width: 230px; aspect-ratio: 9 / 16; border-radius: 8px; background: #000; display: block; }
+  .hook { font-size: 19px; font-weight: 650; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .meta a { color: var(--accent); }
+  label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+          margin: 10px 0 3px; }
+  input, textarea { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+                    border-radius: 6px; padding: 7px 9px; }
+  textarea { min-height: 70px; resize: vertical; }
+  .why { margin: 10px 0 0; }
+  .evidence { margin: 4px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+  .actions button { font: inherit; border-radius: 7px; padding: 7px 16px; cursor: pointer; border: 1px solid var(--line);
+                    background: var(--card); color: var(--ink); }
+  .actions .yes { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .actions .nope { color: var(--no); }
+  .status { font-size: 13px; color: var(--muted); }
+  .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+  @media (max-width: 640px) {
+    .clip { grid-template-columns: 1fr; }
+    video { width: 100%; max-width: 300px; margin: 0 auto; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Clip review</h1>
+  <nav>
+    <button data-tab="new" class="on">To review</button>
+    <button data-tab="approved">Approved</button>
+    <button data-tab="passed">Passed</button>
+  </nav>
+</header>
+<main id="list"></main>
+<script>
+let all = [], tab = "new";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const time = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+
+async function load() {
+  all = await (await fetch("/api/clips")).json();
+  draw();
+}
+
+function draw() {
+  document.querySelectorAll("nav button").forEach(b => {
+    const n = all.filter(c => c.review.status === b.dataset.tab).length;
+    b.classList.toggle("on", b.dataset.tab === tab);
+    b.textContent = b.textContent.replace(/ \(\d+\)$/, "") + ` (${n})`;
+  });
+  const shown = all.filter(c => c.review.status === tab);
+  const list = document.getElementById("list");
+  if (!shown.length) {
+    list.innerHTML = `<p class="empty">${tab === "new" ? "Nothing waiting. Run <code>uv run clipfarm.py run</code> to make more." : "Nothing here yet."}</p>`;
+    return;
+  }
+  list.innerHTML = shown.map(c => `
+    <article class="clip" data-id="${esc(c.id)}">
+      <video src="/${esc(c.media)}/short.mp4" poster="/${esc(c.media)}/poster.jpg" controls preload="none" playsinline></video>
+      <div>
+        <p class="hook">${esc(c.hook)}</p>
+        <div class="meta">Score ${c.score}/10 · context risk ${esc(c.context_risk)}${c.requested ? " · requested" : ""}
+          · ${time(c.start)}–${time(c.end)} of <a href="${esc(c.source_link)}" target="_blank" rel="noopener">${esc(c.source_title)}</a></div>
+        <label>Title</label>
+        <input class="title" value="${esc(c.review.title || c.title)}">
+        <label>Description</label>
+        <textarea class="desc">${esc(c.review.description || c.description)}</textarea>
+        <p class="why">${esc(c.why)}</p>
+        ${c.context_note && c.context_note !== "none" ? `<p class="status">Context: ${esc(c.context_note)}</p>` : ""}
+        ${c.gate ? `<p class="status">Check: ${esc(c.gate.reason)}</p>` : ""}
+        ${(c.evidence || []).length ? `<ul class="evidence">${c.evidence.map(e => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+        <div class="actions">
+          ${tab !== "approved" ? `<button class="yes" data-do="approved">Approve</button>` : `<a href="/${esc(c.media)}/short.mp4" download="${esc(c.id)}.mp4">Download</a>`}
+          ${tab !== "passed" ? `<button class="nope" data-do="passed">Pass</button>` : ""}
+          ${tab !== "new" ? `<button data-do="new">Back to review</button>` : ""}
+        </div>
+      </div>
+    </article>`).join("");
+}
+
+document.querySelector("nav").onclick = e => {
+  if (e.target.dataset.tab) { tab = e.target.dataset.tab; draw(); }
+};
+
+document.getElementById("list").onclick = async e => {
+  const status = e.target.dataset.do;
+  if (!status) return;
+  const card = e.target.closest(".clip");
+  const body = { id: card.dataset.id, status, title: card.querySelector(".title").value,
+                 description: card.querySelector(".desc").value };
+  e.target.disabled = true;
+  await fetch("/api/review", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body) });
+  const c = all.find(c => c.id === body.id);
+  c.review = body;
+  draw();
+};
+
+load();
+</script>
+</body>
+</html>
